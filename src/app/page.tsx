@@ -63,7 +63,7 @@ export default function Home() {
         trigger: containerRef.current,
         start: "top top",
         end: "bottom bottom",
-        scrub: 1.0, // Kinetic delay interpolation for smooth frame transition
+        scrub: true, // Direct mapping, canvas interpolation handles inertia
         onUpdate: (self) => {
           const frameVal = scrollVal.frame;
           frameIndexRef.current = frameVal;

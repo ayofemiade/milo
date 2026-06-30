@@ -24,6 +24,14 @@ export function MiloCinemaCanvas({
 
   const mouseRef = useRef({ x: 0, y: 0 });
   const lerpedMouseRef = useRef({ x: 0, y: 0 });
+  const interpolatedFrameRef = useRef<number>(0);
+
+  // Synchronize initial scroll frame on mount
+  useEffect(() => {
+    if (frameIndexRef.current !== null) {
+      interpolatedFrameRef.current = frameIndexRef.current;
+    }
+  }, [frameIndexRef]);
 
   // Track cursor movement for cinematic parallax
   useEffect(() => {
@@ -90,16 +98,36 @@ export function MiloCinemaCanvas({
         return;
       }
 
-      // Read current index directly from ref to bypass React rendering cycles
-      const currentIdx = Math.round(frameIndexRef.current);
-      
+      // Read target index directly from ref to bypass React rendering cycles
+      const targetIdx = frameIndexRef.current;
+      const currentIdx = interpolatedFrameRef.current;
+
+      const diff = targetIdx - currentIdx;
+      const dist = Math.abs(diff);
+
+      // Adaptive easing factor
+      const baseEase = 0.05; // more weight/inertia for fast scrolling
+      const maxEase = 0.18;  // more precision/responsiveness for slow scrolling
+      const easeRate = maxEase - (maxEase - baseEase) * Math.min(1, dist / 30);
+
+      let nextIdx = currentIdx + diff * easeRate;
+
+      // Snapping threshold to prevent tiny fractional adjustments
+      if (dist < 0.015) {
+        nextIdx = targetIdx;
+      }
+      interpolatedFrameRef.current = nextIdx;
+
+      // Rounded frame number for current frame drawing
+      const renderIdx = Math.round(nextIdx);
+
       // Pre-fetch surrounding frames on mobile if they are null
       if (isMobile) {
-        manageCache(currentIdx);
+        manageCache(renderIdx);
         // Load next and prev frames asynchronously
-        loadFrameOnDemand(currentIdx + 1);
-        loadFrameOnDemand(currentIdx + 2);
-        loadFrameOnDemand(currentIdx - 1);
+        loadFrameOnDemand(renderIdx + 1);
+        loadFrameOnDemand(renderIdx + 2);
+        loadFrameOnDemand(renderIdx - 1);
       }
 
       // Smoothly interpolate cursor positions for organic motion delay
@@ -110,20 +138,20 @@ export function MiloCinemaCanvas({
 
       // Compute transitions for parallax based on index
       // Smoothly blend in parallax as scroll reaches the bottom (from frame 220 to 225)
-      const t = Math.max(0, Math.min(1, (currentIdx - 220) / 5));
+      const t = Math.max(0, Math.min(1, (renderIdx - 220) / 5));
       const zoom = 1.0 + t * 0.04;
       const xOffset = lerpedMouseRef.current.x * t * 20; // Up to 20px translation
       const yOffset = lerpedMouseRef.current.y * t * 20; // Up to 20px translation
 
       // Redraw canvas if frame index changed OR if cursor-parallax is active
-      const hasFrameChanged = currentIdx !== lastRenderedFrameRef.current;
+      const hasFrameChanged = renderIdx !== lastRenderedFrameRef.current;
       const isParallaxActive = t > 0.01 && (
         Math.abs(mouseRef.current.x - lerpedMouseRef.current.x) > 0.001 ||
         Math.abs(mouseRef.current.y - lerpedMouseRef.current.y) > 0.001
       );
 
       if (hasFrameChanged || isParallaxActive) {
-        const img = images[currentIdx];
+        const img = images[renderIdx];
 
         if (img && img.complete) {
           // Calculate object-fit: cover coordinates
@@ -143,11 +171,11 @@ export function MiloCinemaCanvas({
 
           // Perform high-performance draw with mouse offsets
           ctx.drawImage(img, x - xOffset, y - yOffset, newWidth, newHeight);
-          lastRenderedFrameRef.current = currentIdx;
+          lastRenderedFrameRef.current = renderIdx;
         } else {
           // If frame isn't loaded yet, try to load it on demand immediately
           if (!img) {
-            await loadFrameOnDemand(currentIdx);
+            await loadFrameOnDemand(renderIdx);
           }
           // Request visual update on next tick
           lastRenderedFrameRef.current = -1;
