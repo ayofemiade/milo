@@ -44,10 +44,10 @@ export const STORY_SEGMENTS: StorySegment[] = [
 
 export function StoryNarrative() {
   return (
-    <div className="pointer-events-none relative w-full h-[500vh]">
+    <div className="pointer-events-none fixed inset-0 w-full h-screen z-20">
       {/* Scroll indicator instructions overlay */}
-      <div className="absolute top-12 left-1/2 -translate-x-1/2 text-center select-none animate-bounce">
-        <p className="text-[10px] tracking-[0.3em] text-brand-light/30 uppercase">
+      <div className="scroll-indicator absolute top-12 left-1/2 -translate-x-1/2 text-center select-none">
+        <p className="text-[10px] tracking-[0.3em] text-brand-light/30 uppercase animate-bounce">
           SCROLL TO COMMENCE FILM
         </p>
         <div className="w-[1px] h-6 bg-brand-green/30 mx-auto mt-2" />
@@ -61,14 +61,11 @@ export function StoryNarrative() {
             ? "items-end text-right md:pr-24"
             : "items-center text-center";
 
-        const positionClass = `top-[${(index + 0.3) * 80}vh]`;
-
         return (
           <div
             key={segment.id}
             id={`story-${segment.id}`}
-            style={{ top: `${(index + 0.3) * 90}vh` }}
-            className={`absolute left-0 right-0 h-[60vh] flex flex-col justify-center px-6 md:px-12 select-none pointer-events-none ${alignmentClass}`}
+            className={`absolute inset-0 flex flex-col justify-center px-6 md:px-12 select-none pointer-events-none ${alignmentClass}`}
           >
             {/* Elegant glowing glass backplate behind narratives for readability */}
             <div className="max-w-xl glass-panel p-8 md:p-12 rounded-3xl opacity-0 translate-y-12 blur-md transition-all duration-100 ease-out">

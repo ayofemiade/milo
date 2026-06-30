@@ -22,6 +22,26 @@ export function MiloCinemaCanvas({
   const lastRenderedFrameRef = useRef<number>(-1);
   const animationFrameIdRef = useRef<number | null>(null);
 
+  const mouseRef = useRef({ x: 0, y: 0 });
+  const lerpedMouseRef = useRef({ x: 0, y: 0 });
+
+  // Track cursor movement for cinematic parallax
+  useEffect(() => {
+    if (isMobile) return;
+
+    const handleMouseMove = (e: MouseEvent) => {
+      // Normalize coordinate: center of screen is 0, ranges from -1 to 1
+      const x = (e.clientX / window.innerWidth) * 2 - 1;
+      const y = (e.clientY / window.innerHeight) * 2 - 1;
+      mouseRef.current = { x, y };
+    };
+
+    window.addEventListener("mousemove", handleMouseMove);
+    return () => {
+      window.removeEventListener("mousemove", handleMouseMove);
+    };
+  }, [isMobile]);
+
   // Initialize Canvas Context and Handle Resizing
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -82,8 +102,27 @@ export function MiloCinemaCanvas({
         loadFrameOnDemand(currentIdx - 1);
       }
 
-      // Only draw if the frame has actually changed
-      if (currentIdx !== lastRenderedFrameRef.current) {
+      // Smoothly interpolate cursor positions for organic motion delay
+      if (!isMobile) {
+        lerpedMouseRef.current.x += (mouseRef.current.x - lerpedMouseRef.current.x) * 0.08;
+        lerpedMouseRef.current.y += (mouseRef.current.y - lerpedMouseRef.current.y) * 0.08;
+      }
+
+      // Compute transitions for parallax based on index
+      // Smoothly blend in parallax as scroll reaches the bottom (from frame 220 to 225)
+      const t = Math.max(0, Math.min(1, (currentIdx - 220) / 5));
+      const zoom = 1.0 + t * 0.04;
+      const xOffset = lerpedMouseRef.current.x * t * 20; // Up to 20px translation
+      const yOffset = lerpedMouseRef.current.y * t * 20; // Up to 20px translation
+
+      // Redraw canvas if frame index changed OR if cursor-parallax is active
+      const hasFrameChanged = currentIdx !== lastRenderedFrameRef.current;
+      const isParallaxActive = t > 0.01 && (
+        Math.abs(mouseRef.current.x - lerpedMouseRef.current.x) > 0.001 ||
+        Math.abs(mouseRef.current.y - lerpedMouseRef.current.y) > 0.001
+      );
+
+      if (hasFrameChanged || isParallaxActive) {
         const img = images[currentIdx];
 
         if (img && img.complete) {
@@ -94,14 +133,16 @@ export function MiloCinemaCanvas({
           const imgHeight = img.naturalHeight || img.height;
 
           const ratio = Math.max(canvasWidth / imgWidth, canvasHeight / imgHeight);
-          const newWidth = imgWidth * ratio;
-          const newHeight = imgHeight * ratio;
+          // Scale size up slightly based on zoom factor
+          const newWidth = imgWidth * ratio * zoom;
+          const newHeight = imgHeight * ratio * zoom;
 
+          // Standard centered coordinates
           const x = (canvasWidth - newWidth) / 2;
           const y = (canvasHeight - newHeight) / 2;
 
-          // Perform high-performance draw
-          ctx.drawImage(img, x, y, newWidth, newHeight);
+          // Perform high-performance draw with mouse offsets
+          ctx.drawImage(img, x - xOffset, y - yOffset, newWidth, newHeight);
           lastRenderedFrameRef.current = currentIdx;
         } else {
           // If frame isn't loaded yet, try to load it on demand immediately

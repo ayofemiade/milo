@@ -10,7 +10,6 @@ import { MiloCinemaCanvas } from "@/components/MiloCinemaCanvas";
 import { Preloader } from "@/components/Preloader";
 import { StoryNarrative, STORY_SEGMENTS } from "@/components/StoryNarrative";
 import { InteractiveHUD } from "@/components/InteractiveHUD";
-import { ProductSpecsBento } from "@/components/ProductSpecsBento";
 
 // Register ScrollTrigger plugin
 if (typeof window !== "undefined") {
@@ -33,7 +32,6 @@ export default function Home() {
   
   // State variables are updated only when needed for UI text sync (HUD)
   const [activeFrameState, setActiveFrameState] = useState<number>(0);
-  const [isBentoVisible, setIsBentoVisible] = useState<boolean>(false);
 
   const containerRef = useRef<HTMLDivElement | null>(null);
 
@@ -75,9 +73,6 @@ export default function Home() {
           if (currentIntFrame !== lastIntFrame) {
             lastIntFrame = currentIntFrame;
             setActiveFrameState(currentIntFrame);
-            
-            // Show bento spec details during final pouring scene (Frames >= 170)
-            setIsBentoVisible(currentIntFrame >= 170);
           }
         }
       }
@@ -89,10 +84,25 @@ export default function Home() {
       ease: "none"
     });
 
-    // 3. Staggered reveal of storytelling narrative overlays
+    // 3. Fade out scroll indicator as user scrolls down
+    gsap.to(".scroll-indicator", {
+      scrollTrigger: {
+        trigger: containerRef.current,
+        start: "top top",
+        end: "8% top",
+        scrub: true,
+      },
+      opacity: 0,
+      y: -30,
+      ease: "power1.inOut"
+    });
+
+    // 4. Staggered reveal of storytelling narrative overlays
     STORY_SEGMENTS.forEach((segment, index) => {
       const element = document.querySelector(`#story-${segment.id} > div`);
       if (!element) return;
+
+      const isLast = index === STORY_SEGMENTS.length - 1;
 
       // Compute normalized scroll triggers for each segment
       const enterStart = index * 0.18 + 0.05;
@@ -104,45 +114,42 @@ export default function Home() {
         scrollTrigger: {
           trigger: containerRef.current,
           start: `${enterStart * 100}% top`,
-          end: `${exitEnd * 100}% top`,
+          end: isLast ? "bottom bottom" : `${exitEnd * 100}% top`,
           scrub: true,
         }
       });
 
-      // Staggered reveal tween: Fades in, blurs, and slides up/down
-      triggerTl
-        .to(element, {
-          opacity: 1,
-          y: 0,
-          filter: "blur(0px)",
-          duration: 1.0,
-          ease: "power2.out"
-        })
-        .to(element, {
-          opacity: 0,
-          y: -40,
-          filter: "blur(12px)",
-          duration: 1.0,
-          ease: "power2.in",
-          delay: 1.2
-        });
+      if (isLast) {
+        // Last slide: Fade in and stay visible at the bottom of the page
+        triggerTl
+          .to(element, {
+            opacity: 1,
+            y: 0,
+            filter: "blur(0px)",
+            duration: 1.0,
+            ease: "power2.out"
+          })
+          .to({}, { duration: 1.5 }); // Keep it visible for the remaining scroll range
+      } else {
+        // Normal slides: Fade in and then fade out
+        triggerTl
+          .to(element, {
+            opacity: 1,
+            y: 0,
+            filter: "blur(0px)",
+            duration: 1.0,
+            ease: "power2.out"
+          })
+          .to(element, {
+            opacity: 0,
+            y: -40,
+            filter: "blur(12px)",
+            duration: 1.0,
+            ease: "power2.in",
+            delay: 1.2
+          });
+      }
     });
-
-    // 4. Shift canvas container to the left in final Scene 5 (desktop only)
-    if (!isMobile) {
-      gsap.to(".cinema-canvas-wrapper", {
-        scrollTrigger: {
-          trigger: containerRef.current,
-          start: "70% top",
-          end: "90% top",
-          scrub: true,
-        },
-        x: "-15%",
-        scale: 0.95,
-        borderRadius: "40px",
-        boxShadow: "0 25px 70px -10px rgba(0, 150, 57, 0.3)"
-      });
-    }
 
     return () => {
       lenis.destroy();
@@ -192,13 +199,12 @@ export default function Home() {
         {/* 5. Narrative Text Overlays */}
         {preloadState.isReady && <StoryNarrative />}
 
-        {/* 6. Product Specification Bento Grid (Mounts at bottom of track) */}
+        {/* 6. Transparent Copyright Overlay (Mounts at bottom of track) */}
         {preloadState.isReady && (
-          <div className="absolute bottom-0 left-0 right-0 w-full flex flex-col justify-end min-h-screen bg-gradient-to-t from-[#020803] via-[#020803]/80 to-transparent">
-            <ProductSpecsBento isVisible={isBentoVisible} />
-            <footer className="w-full py-12 text-center text-[10px] font-mono tracking-[0.3em] text-brand-light/20 border-t border-brand-green/5 bg-brand-dark">
+          <div className="absolute bottom-6 left-0 right-0 w-full text-center pointer-events-none select-none z-30">
+            <span className="text-[9px] font-mono tracking-[0.3em] text-brand-light/25 uppercase">
               © {new Date().getFullYear()} MILO® CINEMATIC EXPERIENCE. ALL RIGHTS RESERVED.
-            </footer>
+            </span>
           </div>
         )}
       </div>
