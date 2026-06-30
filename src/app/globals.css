@@ -1,0 +1,88 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: var(--font-inter), sans-serif;
+  --font-display: var(--font-outfit), sans-serif;
+  
+  --color-brand-green: #009639;
+  --color-brand-gold: #d2a614;
+  --color-brand-dark: #020803;
+  --color-brand-light: #f4f7f5;
+}
+
+:root {
+  --background: #020803;
+  --foreground: #f4f7f5;
+}
+
+body {
+  background-color: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans);
+  scrollbar-color: #009639 #020803;
+  scrollbar-width: thin;
+  overflow-x: hidden;
+}
+
+/* Custom Lenis Smooth Scroll Configuration */
+html.lenis, html.lenis body {
+  height: auto;
+}
+
+.lenis-smooth {
+  scroll-behavior: auto !important;
+}
+
+.lenis-smooth [data-lenis-prevent] {
+  overscroll-behavior: contain;
+}
+
+.lenis-stopped {
+  overflow: hidden;
+}
+
+.lenis-scrolling iframe {
+  pointer-events: none;
+}
+
+/* Custom styling utilities */
+@utility glass-panel {
+  background: rgba(2, 14, 5, 0.6);
+  backdrop-filter: blur(20px) saturate(110%);
+  -webkit-backdrop-filter: blur(20px) saturate(110%);
+  border: 1px solid rgba(0, 150, 57, 0.15);
+}
+
+@utility glass-panel-hover {
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  
+  &:hover {
+    background: rgba(2, 20, 7, 0.75);
+    border-color: rgba(210, 166, 20, 0.3);
+    box-shadow: 0 10px 30px -10px rgba(0, 150, 57, 0.2);
+  }
+}
+
+@utility text-glow-green {
+  text-shadow: 0 0 12px rgba(0, 150, 57, 0.4);
+}
+
+@utility text-glow-gold {
+  text-shadow: 0 0 12px rgba(210, 166, 20, 0.4);
+}
+
+/* Native Webkit scrollbars styling */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #020803;
+}
+::-webkit-scrollbar-thumb {
+  background: #009639;
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #d2a614;
+}
